@@ -26,13 +26,13 @@ public class Server {
       Socket s = null;
       try {
          server = new ServerSocket(serverPort);
-         System.out.println("Сервер запущен. Ожидание клиентов...");
+         System.out.println("Rabbit Chat Server started. Waiting for clients...");
          while (true) {
             // Как только клиент подключился, создаем сокет (соединение)
             s = server.accept();
-            System.out.println("New client connected");
-            System.out.println("Host: " + s.getLocalAddress());
-            System.out.println("Port: " + s.getPort());
+            System.out.print("New client connected. ");
+            System.out.print(" Host: " + s.getLocalAddress());
+            System.out.println( " Port: " + s.getPort());
             // В отдельном потоке запускаем обработчик этого клиента
             ClientHandler clientHandler = new ClientHandler(s, this);
             userList.add(clientHandler);

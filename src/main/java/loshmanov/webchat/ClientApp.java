@@ -13,6 +13,8 @@ public class ClientApp {
    public static final int SERVER_PORT = 8189;
 
    public static void main(String[] args) {
+      ClientApp instance = new ClientApp();
+      System.out.println(instance.getClass().getClassLoader().getResource("icon.png"));
       new ClientWindow(SERVER_HOST, SERVER_PORT);
    }
 

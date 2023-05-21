@@ -21,7 +21,7 @@ public class ClientHandler implements Runnable {
     private PrintWriter out;
     private Scanner in;
     private static int CLIENTS_COUNT = 0;
-    private String name;
+    private String chatName;
     private String clientAddress;
 
     public ClientHandler(Socket s, Server server) {
@@ -32,11 +32,22 @@ public class ClientHandler implements Runnable {
             in = new Scanner(s.getInputStream());
             CLIENTS_COUNT++;
             clientAddress = s.getLocalAddress().toString().replaceFirst("/", "") + ":" + s.getPort();
-            name = "User #" + CLIENTS_COUNT;
-            System.out.println("UL.size=" + server.getUserList().size());
-            String newUserMessage = String.format("New User connected: %s (%s)", name, clientAddress);
-            sendBroadcastMessage(newUserMessage, 1);
-            sendLocalMessage("New User connected: " + name, 1);
+            chatName = "User #" + CLIENTS_COUNT;
+
+            String newUserMessage = String.format("New User connected: <%s> (%s)", chatName, clientAddress);
+            sendBroadcastMessage("", newUserMessage, 1);
+            String localWelcomeMessage =
+                    "\n" +
+                            "  _____       _     _     _ _      _____ _           _   \n" +
+                            " |  __ \\     | |   | |   (_) |    / ____| |         | |  \n" +
+                            " | |__) |__ _| |__ | |__  _| |_  | |    | |__   __ _| |_ \n" +
+                            " |  _  // _` | '_ \\| '_ \\| | __| | |    | '_ \\ / _` | __|\n" +
+                            " | | \\ \\ (_| | |_) | |_) | | |_  | |____| | | | (_| | |_ \n" +
+                            " |_|  \\_\\__,_|_.__/|_.__/|_|\\__|  \\_____|_| |_|\\__,_|\\__|\n" +
+                            "                                                         \n" +
+
+                            "Welcome to Rabbit chat! Type /h for list of commands.";
+            sendLocalMessage("", localWelcomeMessage, 3);
 
 
         } catch (IOException e) {
@@ -44,7 +55,7 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    public void sendLocalMessage(String message, int timeFormat) {
+    public void sendLocalMessage(String name, String message, int timeFormat) {
         String time;
         switch (timeFormat) {
             case (1) -> time = DateTimeFormatter.ofPattern("dd-MM-yy, HH:mm:ss")
@@ -53,14 +64,20 @@ public class ClientHandler implements Runnable {
                     .format(LocalDateTime.now());
             default -> time = "";
         }
+        String nameOut = name.length() > 0 ? "<" + name + ">" : "";
+        String finalMessage = name.length() == 0 ? message : time + " " + nameOut + " " + message;
 
-        out.println(time + " " + message);
+        out.println(finalMessage);
         out.flush();
     }
 
-    public void sendBroadcastMessage(String message, int timeFormat) {
+    public void sendLocalSystemMessage(String message) {
+        sendLocalMessage("", message, 3);
+    }
+
+    public void sendBroadcastMessage(String name, String message, int timeFormat) {
         for (ClientHandler c : server.getUserList()) {
-            c.sendLocalMessage(message, timeFormat);
+            c.sendLocalMessage(name, message, timeFormat);
         }
     }
 
@@ -70,11 +87,25 @@ public class ClientHandler implements Runnable {
         while (true) {
             if (in.hasNext()) {
                 String message = in.nextLine();
-                System.out.println(name + ": " + message);
-                //out.println(name + " : " + message);
-                System.out.println("Users count=" + server.getUserList().size());
-                sendBroadcastMessage(name + " : " + message, 2);
-                if (message.equals("end")) {
+                System.out.println(chatName + ": " + message);
+
+                if (message.matches("^/h")) {
+                    message = "List of commands: \n" +
+                            "/n: change name \n" +
+                            "/q: quit \n" +
+                            "/h: help";
+                    sendLocalSystemMessage(message);
+                } else {
+                    if (message.matches("^/n .*")) {
+                        String newName = message.substring(3, message.length());
+                        if (newName.length() > 0) {
+                            message = "User '" + chatName + "' (" + clientAddress + ") changed name to " + newName;
+                            chatName = newName;
+                        }
+                    }
+                    sendBroadcastMessage(chatName, message, 2);
+                }
+                if (message.matches("^/q")) {
                     break;
                 }
             }

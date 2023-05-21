@@ -16,7 +16,6 @@ import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.net.URL;
 import java.util.Scanner;
 
 // добавить функционал - сообщения отв сех клиентов и имена
@@ -30,7 +29,10 @@ public class ClientWindow extends JFrame {
 
     private JTextField clientMsgElement;
 
-    private Font font;
+    private Font fontMain;
+    private Font fontButton;
+
+    private String windowTitle;
 
     public ClientWindow(String host, int port) {
         serverHost = host;
@@ -39,6 +41,7 @@ public class ClientWindow extends JFrame {
         initConnection();
         initGui();
         initServerListener();
+
     }
 
     private void initConnection() {
@@ -52,26 +55,36 @@ public class ClientWindow extends JFrame {
     }
 
     private void initGui() {
-        setBounds(600, 300, 600, 600);
+        setBounds(600, 300, 1000, 600);
         setLocationRelativeTo(null);
-        String windowTitle = socket.getLocalAddress() + ":" + socket.getLocalPort();
+        if (socket != null){
+            String windowTitle = socket.getLocalAddress().toString().replaceFirst("/", "") + ":" + socket.getLocalPort();
+        }
+        else {
+            windowTitle = "No connection";
+
+        }
         setTitle(windowTitle);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         Image windowIcon = Toolkit.getDefaultToolkit().getImage("icon.png");
         //File fileName = new File(this.getClass().getClassLoader().getResource("/icon.png").getFile());
-        URL url1 = this.getClass().getClassLoader().getResource("icon.png");
-        System.out.println(url1);
+
+//        URL url1 = this.getClass().getResource("icon.png");
+//        System.out.println(url1);
         setIconImage(windowIcon);
 
         serverMsgElement = new JTextArea();
         serverMsgElement.setEditable(false);
         serverMsgElement.setLineWrap(true);
-        font = new Font(Font.MONOSPACED, Font.BOLD, 20);
+        fontMain = new Font(Font.DIALOG_INPUT, Font.PLAIN, 22);
 
-        serverMsgElement.setFont(font);
+        serverMsgElement.setFont(fontMain);
         serverMsgElement.setBackground(new Color(43, 43, 43));
         serverMsgElement.setForeground(new Color(58, 151, 64));
         JScrollPane scrollPane = new JScrollPane(serverMsgElement);
+        if (socket == null){
+            serverMsgElement.setText("Couldn't connect to Rabbit Chat server. Try again later.");
+        }
         add(scrollPane, BorderLayout.CENTER);
 
         JPanel bottomPanel = new JPanel(new BorderLayout());
@@ -80,10 +93,12 @@ public class ClientWindow extends JFrame {
         JButton sendButton = new JButton("SEND");
         sendButton.setBackground(new Color(76, 80, 82));
         sendButton.setForeground(new Color(58, 151, 64));
+        fontButton = new Font("Arial", Font.PLAIN, 23);
+        sendButton.setFont(fontButton);
         bottomPanel.add(sendButton, BorderLayout.EAST);
 
         clientMsgElement = new JTextField();
-        clientMsgElement.setFont(font);
+        clientMsgElement.setFont(fontMain);
         clientMsgElement.setBackground(new Color(43, 43, 43));
         clientMsgElement.setForeground(new Color(58, 151, 64));
         clientMsgElement.setToolTipText("Enter your message to chat");
@@ -96,7 +111,6 @@ public class ClientWindow extends JFrame {
         clientMsgElement.addKeyListener(new KeyListener() {
             @Override
             public void keyTyped(KeyEvent e) {
-
             }
 
             @Override
@@ -137,7 +151,6 @@ public class ClientWindow extends JFrame {
         out.println(message);
         out.flush();
         clientMsgElement.setText("");
-
     }
 
     public void closeConnection() {
@@ -153,12 +166,13 @@ public class ClientWindow extends JFrame {
     }
 
     public void initServerListener() {
-        new Thread(() -> {
+        Thread serverListenerThread = new Thread(() -> {
             try {
                 while (true) {
                     if (in.hasNext()) {
                         String message = in.nextLine();
-                        if (message.equals("end")) {
+                        if (message.matches("^/q")) {
+                            closeConnection();
                             break;
                         }
                         serverMsgElement.append(message + "\n");
@@ -168,7 +182,8 @@ public class ClientWindow extends JFrame {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        }).start();
+        });
+        serverListenerThread.start();
 
     }
 
