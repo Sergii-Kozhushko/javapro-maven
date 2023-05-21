@@ -13,7 +13,7 @@ public class PaymentGateway {
       if (!isDBAvailable){
           throw new PaymentFailedException("DB is not available");
       }
-      if (amount > 100){
+      if (amount < 0){
          return true;
       }
       else {

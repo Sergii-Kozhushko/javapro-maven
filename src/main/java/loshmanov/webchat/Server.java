@@ -7,12 +7,18 @@
 
 package loshmanov.webchat;
 
+import lombok.Getter;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
+@Getter
 public class Server {
    private final int serverPort;
+   private List<ClientHandler> userList = new ArrayList<>();
 
    public Server(int port) {
       serverPort = port;
@@ -24,9 +30,14 @@ public class Server {
          while (true) {
             // Как только клиент подключился, создаем сокет (соединение)
             s = server.accept();
-            System.out.println("Клиент подключился");
+            System.out.println("New client connected");
+            System.out.println("Host: " + s.getLocalAddress());
+            System.out.println("Port: " + s.getPort());
             // В отдельном потоке запускаем обработчик этого клиента
-            new Thread(new ClientHandler(s)).start();
+            ClientHandler clientHandler = new ClientHandler(s, this);
+            userList.add(clientHandler);
+            Thread thread = new Thread(clientHandler);
+            thread.start();
          }
       } catch (IOException e) {
          e.printStackTrace();

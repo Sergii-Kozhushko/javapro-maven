@@ -9,116 +9,167 @@ package loshmanov.webchat;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.net.URL;
 import java.util.Scanner;
 
 // добавить функционал - сообщения отв сех клиентов и имена
 public class ClientWindow extends JFrame {
-   private final String serverHost;
-   private final int serverPort;
-   private Socket socket;
-   private PrintWriter out;
-   private Scanner in;
-   private JTextArea serverMsgElement;
+    private final String serverHost;
+    private final int serverPort;
+    private Socket socket;
+    private PrintWriter out;
+    private Scanner in;
+    private JTextArea serverMsgElement;
 
-   private JTextField clientMsgElement;
+    private JTextField clientMsgElement;
 
-   public ClientWindow(String host, int port) {
-      serverHost = host;
-      serverPort = port;
+    private Font font;
 
-      initConnection();
-      initGui();
-      initServerListener();
-   }
+    public ClientWindow(String host, int port) {
+        serverHost = host;
+        serverPort = port;
 
-   private void initConnection() {
-      try {
-         socket = new Socket(serverHost, serverPort);
-         out = new PrintWriter(socket.getOutputStream());
-         in = new Scanner(socket.getInputStream());
-      } catch (IOException e) {
-         e.printStackTrace();
-      }
-   }
+        initConnection();
+        initGui();
+        initServerListener();
+    }
 
-   private void initGui() {
-      setBounds(600, 300, 500, 500);
-      setTitle("Client window");
-      setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-
-      serverMsgElement = new JTextArea();
-      serverMsgElement.setEditable(true);
-      serverMsgElement.setLineWrap(true);
-      JScrollPane scrollPane = new JScrollPane(serverMsgElement);
-      add(scrollPane, BorderLayout.CENTER);
-
-      JPanel bottomPanel = new JPanel(new BorderLayout());
-      add(bottomPanel, BorderLayout.SOUTH);
-
-      JButton sendButton = new JButton("SEND");
-      bottomPanel.add(sendButton, BorderLayout.EAST);
-
-      clientMsgElement = new JTextField();
-      bottomPanel.add(clientMsgElement, BorderLayout.CENTER);
-
-      sendButton.addActionListener(e -> {
-         String message = clientMsgElement.getText();
-         sendMessage(message);
-         clientMsgElement.grabFocus();
-      });
-
-      addWindowListener(new WindowAdapter() {
-         @Override
-         public void windowClosing(WindowEvent e) {
-
-         }
-      });
-
-      setVisible(true);
-
-
-   }
-   public void sendMessage(String message){
-      if (message.isEmpty()){
-         return;
-      }
-      out.println(message);
-      out.flush();
-      clientMsgElement.setText("");
-
-   }
-
-   public void closeConnection(){
-      out.println("end");
-      out.flush();
-      try {
-         socket.close();
-         out.close();
-         in.close();
-      } catch (IOException e) {
-         throw new RuntimeException(e);
-      }
-   }
-
-   public void initServerListener(){
-      new Thread(() -> {
-         try {
-            while (true) {
-               if (in.hasNext()) {
-                  String message = in.nextLine();
-                  serverMsgElement.append(message + "\n");
-               }
-            }
-         } catch (Exception e){
+    private void initConnection() {
+        try {
+            socket = new Socket(serverHost, serverPort);
+            out = new PrintWriter(socket.getOutputStream());
+            in = new Scanner(socket.getInputStream());
+        } catch (IOException e) {
             e.printStackTrace();
-         }
-      }).start();
+        }
+    }
 
-   }
+    private void initGui() {
+        setBounds(600, 300, 600, 600);
+        setLocationRelativeTo(null);
+        String windowTitle = socket.getLocalAddress() + ":" + socket.getLocalPort();
+        setTitle(windowTitle);
+        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        Image windowIcon = Toolkit.getDefaultToolkit().getImage("icon.png");
+        //File fileName = new File(this.getClass().getClassLoader().getResource("/icon.png").getFile());
+        URL url1 = this.getClass().getClassLoader().getResource("icon.png");
+        System.out.println(url1);
+        setIconImage(windowIcon);
+
+        serverMsgElement = new JTextArea();
+        serverMsgElement.setEditable(false);
+        serverMsgElement.setLineWrap(true);
+        font = new Font(Font.MONOSPACED, Font.BOLD, 20);
+
+        serverMsgElement.setFont(font);
+        serverMsgElement.setBackground(new Color(43, 43, 43));
+        serverMsgElement.setForeground(new Color(58, 151, 64));
+        JScrollPane scrollPane = new JScrollPane(serverMsgElement);
+        add(scrollPane, BorderLayout.CENTER);
+
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        add(bottomPanel, BorderLayout.SOUTH);
+
+        JButton sendButton = new JButton("SEND");
+        sendButton.setBackground(new Color(76, 80, 82));
+        sendButton.setForeground(new Color(58, 151, 64));
+        bottomPanel.add(sendButton, BorderLayout.EAST);
+
+        clientMsgElement = new JTextField();
+        clientMsgElement.setFont(font);
+        clientMsgElement.setBackground(new Color(43, 43, 43));
+        clientMsgElement.setForeground(new Color(58, 151, 64));
+        clientMsgElement.setToolTipText("Enter your message to chat");
+
+        clientMsgElement.setCaretColor(new Color(58, 151, 64));
+
+        clientMsgElement.setBorder(BorderFactory.createCompoundBorder(clientMsgElement.getBorder(),
+                BorderFactory.createEmptyBorder(6, 6, 6, 6)));
+
+        clientMsgElement.addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    sendMessage(clientMsgElement.getText());
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+
+            }
+        });
+        bottomPanel.add(clientMsgElement, BorderLayout.CENTER);
+
+        sendButton.addActionListener(e -> {
+            String message = clientMsgElement.getText();
+            sendMessage(message);
+            clientMsgElement.grabFocus();
+        });
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+            }
+        });
+
+        setVisible(true);
+        clientMsgElement.grabFocus();
+
+    }
+
+    public void sendMessage(String message) {
+        if (message.isEmpty()) {
+            return;
+        }
+        out.println(message);
+        out.flush();
+        clientMsgElement.setText("");
+
+    }
+
+    public void closeConnection() {
+        out.println("end");
+        out.flush();
+        try {
+            socket.close();
+            out.close();
+            in.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void initServerListener() {
+        new Thread(() -> {
+            try {
+                while (true) {
+                    if (in.hasNext()) {
+                        String message = in.nextLine();
+                        if (message.equals("end")) {
+                            break;
+                        }
+                        serverMsgElement.append(message + "\n");
+                        clientMsgElement.grabFocus();
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+
+    }
 
 }
